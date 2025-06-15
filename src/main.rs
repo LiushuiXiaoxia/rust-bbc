@@ -1,17 +1,7 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+mod routes;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello World!")
-}
-
-#[get("/health")]
-async fn health_check() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "ok",
-        "message": "Service is running"
-    }))
-}
+use actix_web::{web, App, HttpServer};
+use routes::index::{hello, health_check};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
