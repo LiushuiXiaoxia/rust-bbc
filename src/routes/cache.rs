@@ -1,11 +1,13 @@
 use crate::util::durations;
+use actix_web::cookie::Expiration::DateTime;
 use actix_web::http::Method;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use chrono::Utc;
 use log::{info, warn};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 /// 匹配所有其他路径
 pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder {
@@ -71,7 +73,14 @@ async fn handle_put(path: &str, data: &[u8]) -> HttpResponse {
         }
     }
 
-    match fs::File::create(&full_path).and_then(|mut f| f.write_all(data)) {
+    let temp = format!(
+        "{}.{}.t",
+        full_path.to_str().unwrap(),
+        Utc::now().timestamp()
+    );
+    let ret = fs::File::create(&temp).and_then(|mut f| f.write_all(data));
+    fs::rename(&temp, &full_path).unwrap();
+    match ret {
         Ok(_) => HttpResponse::Ok().body("File written successfully"),
         Err(e) => {
             let string = format!("Failed to write file: {}", e);
