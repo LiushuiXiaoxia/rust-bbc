@@ -1,5 +1,5 @@
 use actix_web::http::Method;
-use actix_web::{web, Error, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use log::{info, warn};
 use std::fs;
 use std::io::Write;

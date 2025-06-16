@@ -17,6 +17,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
+            .app_data(web::PayloadConfig::new(500 * 1024 * 1024))
             .wrap(Logger::default())
             .service(hello)
             .service(health_check)
