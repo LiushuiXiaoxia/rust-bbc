@@ -1,14 +1,18 @@
+use crate::util::durations;
 use actix_web::http::Method;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use log::{info, warn};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
-/// 匹配所有其他路径（fallback）
+/// 匹配所有其他路径
 pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder {
     let method = req.method().clone();
     let path = req.path();
+    let start = Instant::now();
+    info!("{method} {path} >>>");
 
     let ret = match method {
         Method::GET => handle_get(path).await,
@@ -17,7 +21,11 @@ pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder
         Method::DELETE => handle_delete(path).await,
         _ => HttpResponse::MethodNotAllowed().body("Unsupported method"),
     };
-    info!("{method} {path} <<<");
+
+    info!(
+        "{method} {path} <<< time = {}",
+        durations::display(start.elapsed()),
+    );
     ret
 }
 const CACHE_DIR: &str = "cache";
@@ -32,7 +40,7 @@ fn get_file_path(req_path: &str) -> Option<PathBuf> {
 }
 
 async fn handle_get(path: &str) -> HttpResponse {
-    println!("处理 GET 请求: {}, 完整请求:", path);
+    info!("处理 GET 请求: {}:", path);
     let base_dir = Path::new(CACHE_DIR);
     let relative_path = &path[1..]; // 去掉开头的 `/`
     let full_path = base_dir.join(relative_path);
@@ -48,6 +56,8 @@ async fn handle_get(path: &str) -> HttpResponse {
 }
 
 async fn handle_put(path: &str, data: &[u8]) -> HttpResponse {
+    info!("处理 PUT 请求: {}, data.len = {}", path, data.len());
+
     let full_path = match get_file_path(path) {
         Some(p) => p,
         None => return HttpResponse::Forbidden().body("Invalid path"),
@@ -71,7 +81,7 @@ async fn handle_put(path: &str, data: &[u8]) -> HttpResponse {
 }
 
 async fn handle_delete(path: &str) -> HttpResponse {
-    println!("处理 DELETE 请求: {}", path);
+    info!("处理 DELETE 请求: {}", path);
 
     let base_dir = Path::new(CACHE_DIR);
     let relative_path = &path[1..]; // 去掉开头的 `/`
@@ -86,7 +96,7 @@ async fn handle_delete(path: &str) -> HttpResponse {
 }
 
 async fn handle_head(path: &str) -> HttpResponse {
-    println!("处理 HEAD 请求: {}", path);
+    info!("处理 HEAD 请求: {}", path);
 
     let base_dir = Path::new(CACHE_DIR);
     let relative_path = &path[1..]; // 去掉开头的 `/`

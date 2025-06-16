@@ -1,5 +1,6 @@
 mod config;
 mod routes;
+mod util;
 
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use config::load_config;
