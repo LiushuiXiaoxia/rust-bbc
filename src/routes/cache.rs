@@ -1,13 +1,12 @@
 use crate::util::durations;
-use actix_web::cookie::Expiration::DateTime;
 use actix_web::http::Method;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
-use log::{info, warn};
+use log::info;
+use rovkit::filekit;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
 /// 匹配所有其他路径
 pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder {
@@ -30,6 +29,7 @@ pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder
     );
     ret
 }
+
 const CACHE_DIR: &str = "cache";
 
 /// 根目录配置
@@ -43,15 +43,15 @@ fn get_file_path(req_path: &str) -> Option<PathBuf> {
 
 async fn handle_get(path: &str) -> HttpResponse {
     info!("处理 GET 请求: {}:", path);
-    let base_dir = Path::new(CACHE_DIR);
-    let relative_path = &path[1..]; // 去掉开头的 `/`
-    let full_path = base_dir.join(relative_path);
+
+    let full_path = match get_file_path(path) {
+        Some(p) => p,
+        None => return HttpResponse::Forbidden().body("Invalid path"),
+    };
 
     if full_path.exists() || full_path.is_file() {
-        match fs::read(&full_path) {
-            Ok(data) => HttpResponse::Ok().body(data),
-            Err(_) => HttpResponse::NotFound().body("Failed to read file"),
-        }
+        let data = filekit::read_data(&full_path).unwrap();
+        HttpResponse::Ok().body(data)
     } else {
         HttpResponse::NotFound().body("File not found")
     }
@@ -66,54 +66,43 @@ async fn handle_put(path: &str, data: &[u8]) -> HttpResponse {
     };
 
     // 确保目录存在
-    if let Some(parent) = full_path.parent() {
-        if let Err(e) = fs::create_dir_all(parent) {
-            let s = format!("Failed to create dir: {}", e);
-            return HttpResponse::InternalServerError().body(s);
-        }
-    }
-
+    filekit::create_parent_dir(&full_path).unwrap();
     let temp = format!(
         "{}.{}.t",
         full_path.to_str().unwrap(),
         Utc::now().timestamp()
     );
-    let ret = fs::File::create(&temp).and_then(|mut f| f.write_all(data));
+
+    filekit::write_data(&full_path, data).unwrap();
     fs::rename(&temp, &full_path).unwrap();
-    match ret {
-        Ok(_) => HttpResponse::Ok().body("File written successfully"),
-        Err(e) => {
-            let string = format!("Failed to write file: {}", e);
-            HttpResponse::InternalServerError().body(string)
-        }
-    }
+    HttpResponse::Ok().body("File written successfully")
 }
 
 async fn handle_delete(path: &str) -> HttpResponse {
     info!("处理 DELETE 请求: {}", path);
 
-    let base_dir = Path::new(CACHE_DIR);
-    let relative_path = &path[1..]; // 去掉开头的 `/`
-    let full_path = base_dir.join(relative_path);
+    let full_path = match get_file_path(path) {
+        Some(p) => p,
+        None => return HttpResponse::Forbidden().body("Invalid path"),
+    };
 
     if full_path.exists() || full_path.is_file() {
-        fs::remove_file(&full_path).unwrap_or_else(|_| warn!("无法删除文件"));
-        HttpResponse::Ok().finish()
-    } else {
-        HttpResponse::NotFound().body("File not found")
+        filekit::remove_file(&full_path).unwrap();
     }
+
+    HttpResponse::Ok().finish()
 }
 
 async fn handle_head(path: &str) -> HttpResponse {
     info!("处理 HEAD 请求: {}", path);
 
-    let base_dir = Path::new(CACHE_DIR);
-    let relative_path = &path[1..]; // 去掉开头的 `/`
-    let full_path = base_dir.join(relative_path);
+    let full_path = match get_file_path(path) {
+        Some(p) => p,
+        None => return HttpResponse::Forbidden().body("Invalid path"),
+    };
 
     if full_path.exists() || full_path.is_file() {
-        HttpResponse::Ok().finish()
-    } else {
-        HttpResponse::NotFound().body("File not found")
+        return HttpResponse::Ok().finish();
     }
+    HttpResponse::NotFound().body("File not found")
 }
