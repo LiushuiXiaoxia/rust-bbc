@@ -20,7 +20,7 @@ pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder
         Method::HEAD => handle_head(path).await,
         Method::PUT => handle_put(path, &body).await,
         Method::DELETE => handle_delete(path).await,
-        _ => HttpResponse::MethodNotAllowed().body("Unsupported method"),
+        _ => Ok(HttpResponse::MethodNotAllowed().body("Unsupported method")),
     };
 
     info!(
@@ -37,72 +37,59 @@ fn get_file_path(req_path: &str) -> Option<PathBuf> {
     if req_path.contains("..") {
         return None;
     }
-    let relative_path = req_path.trim_start_matches('/');
-    Some(Path::new(CACHE_DIR).join(relative_path))
+
+    let path = req_path.trim_start_matches('/');
+    Some(Path::new(CACHE_DIR).join(path))
 }
 
-async fn handle_get(path: &str) -> HttpResponse {
+async fn handle_get(path: &str) -> Result<HttpResponse, std::io::Error> {
     info!("处理 GET 请求: {}:", path);
 
-    let full_path = match get_file_path(path) {
-        Some(p) => p,
-        None => return HttpResponse::Forbidden().body("Invalid path"),
-    };
+    let full_path = get_file_path(path).expect("Invalid path");
 
     if full_path.exists() || full_path.is_file() {
-        let data = filekit::read_data(&full_path).unwrap();
-        HttpResponse::Ok().body(data)
-    } else {
-        HttpResponse::NotFound().body("File not found")
+        let data = filekit::read_data(&full_path)?;
+        return Ok(HttpResponse::Ok().body(data));
     }
+
+    Ok(HttpResponse::NotFound().body("File not found"))
 }
 
-async fn handle_put(path: &str, data: &[u8]) -> HttpResponse {
+async fn handle_put(path: &str, data: &[u8]) -> Result<HttpResponse, std::io::Error> {
     info!("处理 PUT 请求: {}, data.len = {}", path, data.len());
 
-    let full_path = match get_file_path(path) {
-        Some(p) => p,
-        None => return HttpResponse::Forbidden().body("Invalid path"),
-    };
+    let full_path = get_file_path(path).expect("Invalid path");
 
     // 确保目录存在
-    filekit::create_parent_dir(&full_path).unwrap();
-    let temp = format!(
-        "{}.{}.t",
-        full_path.to_str().unwrap(),
-        Utc::now().timestamp()
-    );
+    filekit::create_parent_dir(&full_path)?;
+    let t = Utc::now().timestamp();
+    let temp = format!("{}.{}.t", full_path.to_str().unwrap(), t);
 
-    filekit::write_data(&full_path, data).unwrap();
-    fs::rename(&temp, &full_path).unwrap();
-    HttpResponse::Ok().body("File written successfully")
+    filekit::write_data(&full_path, data)?;
+    fs::rename(&temp, &full_path)?;
+
+    Ok(HttpResponse::Ok().body("File written successfully"))
 }
 
-async fn handle_delete(path: &str) -> HttpResponse {
+async fn handle_delete(path: &str) -> Result<HttpResponse, std::io::Error> {
     info!("处理 DELETE 请求: {}", path);
 
-    let full_path = match get_file_path(path) {
-        Some(p) => p,
-        None => return HttpResponse::Forbidden().body("Invalid path"),
-    };
+    let full_path = get_file_path(path).expect("Invalid path");
 
     if full_path.exists() || full_path.is_file() {
-        filekit::remove_file(&full_path).unwrap();
+        filekit::remove_file(&full_path)?;
     }
 
-    HttpResponse::Ok().finish()
+    Ok(HttpResponse::Ok().finish())
 }
 
-async fn handle_head(path: &str) -> HttpResponse {
+async fn handle_head(path: &str) -> Result<HttpResponse, std::io::Error> {
     info!("处理 HEAD 请求: {}", path);
 
-    let full_path = match get_file_path(path) {
-        Some(p) => p,
-        None => return HttpResponse::Forbidden().body("Invalid path"),
-    };
+    let full_path = get_file_path(path).expect("Invalid path");
 
     if full_path.exists() || full_path.is_file() {
-        return HttpResponse::Ok().finish();
+        return Ok(HttpResponse::Ok().finish());
     }
-    HttpResponse::NotFound().body("File not found")
+    Ok(HttpResponse::NotFound().body("File not found"))
 }
