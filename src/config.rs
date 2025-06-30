@@ -1,8 +1,5 @@
-use lazy_static::lazy_static;
-use log::info;
-use rovkit::jsonkit;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::OnceLock;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServerConfig {
@@ -31,10 +28,10 @@ pub struct Config {
     pub s3: S3Config,
 }
 
-lazy_static! {
-    pub static ref GLOBAL_CONFIG: Mutex<Config> = Mutex::new(do_load());
+static GLOBAL_CONFIG: OnceLock<Config> = OnceLock::new();
+pub fn config() -> &'static Config {
+    GLOBAL_CONFIG.get_or_init(|| do_load())
 }
-
 fn do_load() -> Config {
     let dev = "Config.toml";
     let prod = "Config.prod.toml";
@@ -43,8 +40,5 @@ fn do_load() -> Config {
         f = prod;
     }
     let s = rovkit::iokit::read_file_to_string(f).unwrap();
-    let c = toml::from_str(&s).expect("无法解析配置文件");
-    info!("config: {}", jsonkit::to_pretty_json(&c).unwrap());
-
-    c
+    toml::from_str(&s).expect("无法解析配置文件")
 }

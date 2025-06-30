@@ -9,31 +9,30 @@ pub struct LocalCache {
     pub file: PathBuf,
 }
 
-/// 根目录配置
-fn gen_cache_path(key: &str) -> Option<PathBuf> {
-    if key.contains("..") || key.ends_with("/") {
-        return None;
-    }
-
-    let config = crate::config::GLOBAL_CONFIG.lock().unwrap();
-    let root = config.cache.root.as_str();
-    let path = key.trim_start_matches('/').trim_end_matches("/");
-    let t = std::path::absolute(Path::new(root).join(path)).unwrap();
-
-    let mut m = "00";
-    if path.len() > 2 {
-        m = &t.file_name().unwrap().to_str().unwrap()[0..2]
-    }
-
-    let f = t.parent().unwrap().join(m).join(t.file_name().unwrap());
-    iokit::create_dir_all(f.parent().unwrap()).unwrap();
-    Some(f)
-}
-
 impl LocalCache {
     pub fn new(key: String) -> Self {
-        let file = gen_cache_path(key.as_str()).expect("Invalid path");
+        let file = LocalCache::gen_cache_path(key.as_str()).expect("Invalid path");
         Self { key, file }
+    }
+
+    fn gen_cache_path(key: &str) -> Option<PathBuf> {
+        if key.contains("..") || key.ends_with("/") {
+            return None;
+        }
+
+        let config = crate::config::config();
+        let root = config.cache.root.as_str();
+        let path = key.trim_start_matches('/').trim_end_matches("/");
+        let t = std::path::absolute(Path::new(root).join(path)).unwrap();
+
+        let mut m = "00";
+        if path.len() > 2 {
+            m = &t.file_name().unwrap().to_str().unwrap()[0..2]
+        }
+
+        let f = t.parent().unwrap().join(m).join(t.file_name().unwrap());
+        iokit::create_dir_all(f.parent().unwrap()).unwrap();
+        Some(f)
     }
 
     pub fn find(&self) -> &PathBuf {
