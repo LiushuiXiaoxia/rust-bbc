@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 /// 匹配所有其他路径
-pub async fn cache_handler(req: HttpRequest, body: web::Bytes) -> impl Responder {
+pub async fn cache_router_handler(req: HttpRequest, body: web::Bytes) -> impl Responder {
     let method = req.method().clone();
     let path = req.path();
     let start = Instant::now();

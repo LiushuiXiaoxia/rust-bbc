@@ -6,7 +6,7 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 use config::load_config;
 use env_logger::Env;
 use log::info;
-use routes::cache::cache_handler;
+use routes::router::cache_router_handler;
 use routes::index::{health_check, hello};
 use rovkit::jsonkit;
 
@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(hello)
             .service(health_check)
-            .default_service(web::to(cache_handler))
+            .default_service(web::to(cache_router_handler))
     })
     .bind((config.server.host, config.server.port))?
     .run()
