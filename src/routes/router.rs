@@ -27,7 +27,7 @@ pub async fn cache_router_handler(req: HttpRequest, body: web::Bytes) -> impl Re
     ret
 }
 async fn handle_get(path: &str) -> Result<HttpResponse, std::io::Error> {
-    info!("处理 GET 请求: {}:", path);
+    info!("处理 GET 请求: {}", path);
 
     let local = LocalCache::new(path.to_string());
     if local.exist() {

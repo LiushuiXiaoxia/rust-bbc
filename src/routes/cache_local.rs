@@ -9,16 +9,16 @@ pub struct LocalCache {
     pub file: PathBuf,
 }
 
-const CACHE_DIR: &str = "cache";
-
 /// 根目录配置
 fn gen_cache_path(key: &str) -> Option<PathBuf> {
     if key.contains("..") || key.ends_with("/") {
         return None;
     }
 
+    let config = crate::config::GLOBAL_CONFIG.lock().unwrap();
+    let root = config.cache.root.as_str();
     let path = key.trim_start_matches('/').trim_end_matches("/");
-    let t = std::path::absolute(Path::new(CACHE_DIR).join(path)).unwrap();
+    let t = std::path::absolute(Path::new(root).join(path)).unwrap();
 
     let mut m = "00";
     if path.len() > 2 {
