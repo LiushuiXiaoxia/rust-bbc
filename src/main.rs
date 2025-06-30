@@ -5,19 +5,19 @@ mod util;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use config::load_config;
 use env_logger::Env;
-use log::info;
-use routes::router::cache_router_handler;
 use routes::index::{health_check, hello};
-use rovkit::jsonkit;
+use routes::router::cache_router_handler;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-    let config = load_config();
-    info!("config: {}", jsonkit::to_pretty_json(&config)?);
+    load_config();
+    let config = config::GLOBAL_CONFIG.get().unwrap().lock().unwrap();
+    let host = config.server.host.as_str();
+    let port = config.server.port;
 
-    let addr = format!("http://{}:{}", config.server.host, config.server.port);
+    let addr = format!("http://{}:{}", host, port);
     println!("Server starting at {}", addr);
 
     HttpServer::new(|| {
@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
             .service(health_check)
             .default_service(web::to(cache_router_handler))
     })
-    .bind((config.server.host, config.server.port))?
+    .bind((host, port))?
     .run()
     .await
 }
