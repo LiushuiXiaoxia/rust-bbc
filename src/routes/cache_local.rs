@@ -35,8 +35,8 @@ impl LocalCache {
         Some(f)
     }
 
-    pub fn find(&self) -> &PathBuf {
-        &self.file
+    pub fn find(&self) -> PathBuf {
+        self.file.clone()
     }
 
     pub fn exist(&self) -> bool {

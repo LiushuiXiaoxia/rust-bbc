@@ -10,9 +10,12 @@ chrono = "0.4"
 serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.107"
 toml = "0.8.6"
-config = "0.13.3"
+#config = "0.13.3"
 env_logger = "0.10.0"
 futures = "0.3.31"
 log = "0.4.27"
 rovkit = "0.0.5"
-lazy_static = "1.5.0"
+async-once-cell = "0.5.4"
+aws-sdk-s3 = { version = "1.94.0", features = ["behavior-version-latest"] }
+aws-config = { version = "1.8.0", features = ["behavior-version-latest"] }
+once_cell = "1.19"

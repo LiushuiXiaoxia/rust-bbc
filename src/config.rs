@@ -36,10 +36,11 @@ pub fn config() -> &'static Config {
 fn do_load() -> Config {
     let dev = "Config.toml";
     let prod = "Config.prod.toml";
-    let mut f = dev;
-    if rovkit::iokit::path_exists(prod) {
-        f = prod;
-    }
+    let f = if rovkit::iokit::path_exists(prod) {
+        prod
+    } else {
+        dev
+    };
     let s = rovkit::iokit::read_file_to_string(f).unwrap();
     toml::from_str(&s).expect("无法解析配置文件")
 }

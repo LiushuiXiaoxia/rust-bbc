@@ -11,7 +11,7 @@ use routes::router::cache_router;
 use rovkit::jsonkit;
 
 fn server() -> Server {
-    let config = crate::config::config();
+    let config = config::config();
     info!("config = {}", jsonkit::to_pretty_json(config).unwrap());
 
     let host = config.server.host.as_str();
