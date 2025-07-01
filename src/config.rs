@@ -15,6 +15,7 @@ pub struct CacheConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct S3Config {
+    pub bucket: String,
     pub region: String,
     pub endpoint: String,
     pub access_key: String,

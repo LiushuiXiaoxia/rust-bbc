@@ -9,7 +9,8 @@ payload = 500
 root = "./cache"
 
 [s3]
+bucket = "gradle-cache"
 region = ""
-endpoint = ""
-access_key = ""
-secret_key = ""
+endpoint = "http://10.23.172.150:9000/"
+access_key = "minioadmin"
+secret_key = "minioadmin"
